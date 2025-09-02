@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="{{ url_for('static', filename='news.svg') }}" type="image/x-icon">
+    <title>News Organiser</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            padding: 40px;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 20px;
+        }
+
+        li {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            color: #1abc9c;
+        }
+
+        .keyword-chip {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            margin: 5px 5px 0 0;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .site-footer {
+            color: #2c3e50;
+            padding: 30px 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        #settingsBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        #settingsModal {
+            display: none;
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            z-index: 1000;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 20px;
+            }
+
+            input,
+            button {
+                font-size: 14px;
+            }
+        }
+
+        .tips {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        #save {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .notstored {
+            color: #000000;
+            font-size: 24px;
+        }
+
+        .stored {
+            color: #f1c40f;
+            font-size: 24px;
+        }
+
+        #settingsModal {
+            display: none;
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid #ccc;
+            z-index: 1000;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: #f2f2f2;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        #closeSettings {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #888;
+            cursor: pointer;
+        }
+
+        .modal-content {
+            padding: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .tab-buttons button {
+            flex: 1;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tab-buttons button:hover {
+            background-color: #2980b9;
+        }
+
+        #bookmarksList {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-left: 0;
+            margin-top: 10px;
+        }
+
+        #bookmarksList li {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .domain-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        #danger {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Settings Button -->
+    <button id="settingsBtn" aria-label="Open Settings">
+        <img src="{{ url_for('static', filename='settings.svg') }}" alt="Settings" style="width: 24px; height: 24px;">
+    </button>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" style="display: none;">
+        <div class="modal-header">
+            <h3 id="settingsTitle">Settings</h3>
+            <button id="closeSettings" aria-label="Close Settings" onclick="closeSettingsModal()">&times;</button>
+        </div>
+        <div class="modal-content">
+            <div class="tab-buttons">
+                <button id="tabHistory">Search History</button>
+                <button id="tabDomains">Set Domains</button>
+                <button id="tabBookmarks">Bookmarks</button>
+            </div>
+
+            <!-- Search History Section -->
+            <div id="historySection">
+                <label for="historyDropdown">Search History:</label>
+                <div class="tips">Select a previous search to quickly fill the search box.<br>(Only the last 50 searches
+                    are saved.)</div>
+                <select id="historyDropdown">
+                    <option value="">Select a previous search</option>
+                </select>
+            </div>
+
+            <!-- Bookmarks Section -->
+            <div id="bookmarksSection" style="display: none;">
+                <label>Bookmarks:</label>
+                <ul id="bookmarksList"></ul>
+            </div>
+
+            <!-- Domain Editor Section -->
+            <div id="domainSection" style="display: none;">
+                <label for="domainEditor">Allowed Domains:</label>
+                <div class="tips">Enter one domain per line. Only news from these domains will be shown.</div>
+                <div class="tips">
+                    <div id="danger">If it is cleared, all domain will be allowed. (Not recommended)</div>
+                </div>
+                <textarea id="domainEditor" rows="10"></textarea>
+                <div class="domain-buttons">
+                    <button id="saveDomains">Save</button>
+                    <button id="resetDomains" class="danger">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h1><img src="{{ url_for('static', filename='news.svg') }}" alt="" style="width: 24px; height: 24px;"> News Organiser</h1>
+
+    <input type="text" id="keyInput" list="keywordSuggestions" placeholder="e.g. Politics, Economics, Technology">
+    <datalist id="keywordSuggestions">
+        <option value="Politics">
+        <option value="Economics">
+        <option value="Technology">
+    </datalist>
+    <div class="tips">Tips: You can enter multiple keywords separated by commas so as to search more keywords at one
+        time.</div>
+        <label style="display:inline-flex;align-items:center;margin-bottom:10px;">
+        <input type="checkbox" id="noDomainFilter" style="margin-right:6px;">
+        Search all domains (ignore filter) <span id="danger">  &nbsp;(Not recommended)</span>
+        </label><br>
+    <button id="submitBtn">Search</button>
+
+
+    <div id="keywordChips"></div>
+    <div id="resultsCount" style="margin-top:10px;font-size:14px;color:#7f8c8d;"></div>
+    <ul id="results"></ul>
+
+    <footer class="site-footer">
+        <p>&copy; 2025 News Organiser (Lazy Doge). All rights reserved.</p>
+        <nav>Data from <a href="https://www.bing.com/news">Bing News</a></nav>
+    </footer>
+
+    <!-- Cookie Banner -->
+    <div id="cookie-banner" style="
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px 20px;
+  text-align: center;
+  z-index: 1000;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+">
+        We use cookies to enhance your experience. By using this site, you agree to our use of cookies.
+        <button id="cookie-dismiss" style="
+    margin-left: 15px;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+  ">Got it</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const banner = document.getElementById("cookie-banner");
+            const dismiss = document.getElementById("cookie-dismiss");
+
+            banner.style.display = "block";
+
+            dismiss.addEventListener("click", function () {
+                banner.style.display = "none";
+            });
+        });
+        let allowedDomains = [];
+
+        function setCookie(name, value, days = 365) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+        }
+
+        function getCookie(name) {
+            return document.cookie.split("; ").reduce((r, v) => {
+                const parts = v.split("=");
+                return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+            }, "");
+        }
+
+        function showToast(message) {
+            const toast = document.createElement("div");
+            toast.textContent = message;
+            Object.assign(toast.style, {
+                position: "fixed",
+                bottom: "20px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "#2ecc71",
+                color: "white",
+                padding: "10px 20px",
+                borderRadius: "6px",
+                zIndex: "1001"
+            });
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Search History
+        function updateHistory(keyword) {
+            let history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+            if (!history.includes(keyword)) {
+                history.unshift(keyword);
+                if (history.length > 50) history.pop();
+                localStorage.setItem("searchHistory", JSON.stringify(history));
+            }
+        }
+
+        function populateHistoryDropdown() {
+            const dropdown = document.getElementById("historyDropdown");
+            dropdown.innerHTML = '<option value="">Select a previous search</option>';
+            const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+            history.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item;
+                option.textContent = item;
+                dropdown.appendChild(option);
+            });
+        }
+
+        // Domain Management
+        async function loadDomains() {
+            const cookieData = getCookie("userDomains");
+            allowedDomains = cookieData
+                ? cookieData.split("\n").map(d => d.trim()).filter(Boolean)
+                : getDefaultDomains();
+            document.getElementById("domainEditor").value = allowedDomains.join("\n");
+        }
+
+        function saveDomains() {
+            const input = document.getElementById("domainEditor").value;
+            allowedDomains = input.split("\n").map(d => d.trim()).filter(Boolean);
+            setCookie("userDomains", allowedDomains.join("\n"));
+            showToast("Domains saved!");
+        }
+
+        function resetDomains() {
+            document.cookie = "userDomains=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            allowedDomains = getDefaultDomains();
+            document.getElementById("domainEditor").value = allowedDomains.join("\n");
+            showToast("Domains reset to default");
+        }
+
+        function getDefaultDomains() {
+            return [
+                "scmp.com", "mingpao.com", "orientaldaily.on.cc", "singtao.com", "hket.com",
+                "thestandard.com.hk", "ejinsight.com", "rthk.hk", "hk01.com", "hongkongfp.com",
+                "inmediahk.net", "bastillepost.com", "am730.com.hk", "takungpao.com.hk", "wenweipo.com",
+                "bbc.com", "cnn.com", "aljazeera.com", "reuters.com", "apnews.com", "france24.com",
+                "dw.com", "bloomberg.com", "nytimes.com", "washingtonpost.com", "theguardian.com",
+                "npr.org", "cnbc.com", "foxnews.com", "cbsnews.com", "nbcnews.com", "indiatimes.com",
+                "sky.com", "nhk.jp", "msn.com", "news.google.com", "news.yahoo.com"
+            ];
+        }
+
+        // Bookmarking
+        function save(button, itemJson) {
+            const item = JSON.parse(itemJson);
+            const iconDiv = button.querySelector('div');
+            let bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
+
+            const isStored = iconDiv.classList.contains("stored");
+
+            if (isStored) {
+                iconDiv.classList.remove("stored");
+                iconDiv.classList.add("notstored");
+                iconDiv.textContent = "\u2606";
+                bookmarks = bookmarks.filter(b => b.url !== item.url);
+                showToast("News un-bookmarked successfully!");
+            } else {
+                iconDiv.classList.remove("notstored");
+                iconDiv.classList.add("stored");
+                iconDiv.textContent = "\u2605";
+                bookmarks.push(item);
+                showToast("News bookmarked successfully!");
+            }
+
+            localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
+            updateBookmarksList();
+        }
+
+        function updateBookmarksList() {
+            const list = document.getElementById("bookmarksList");
+            list.innerHTML = "";
+            const bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
+
+            if (bookmarks.length === 0) {
+                list.innerHTML = "<li>No bookmarks yet.</li>";
+                return;
+            }
+
+            bookmarks.forEach(item => {
+                const li = document.createElement("li");
+                li.innerHTML = `<a href="${item.url}" target="_blank">${item.title}<br>Source: ${item.domain}</a> <button id="removeBookmark" onclick="removebookmark('${item.url}')" style="background: none; border: none; cursor: pointer;">
+                    <span class="notstored">&#10006;</span></button>`;
+                list.appendChild(li);
+            });
+        }
+        function removebookmark(url) {
+            let bookmarks = JSON.parse(localStorage.getItem("bookmarks") || "[]");
+            bookmarks = bookmarks.filter(b => b.url !== url);
+            localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
+            updateBookmarksList();
+        }
+
+        //Tab Navigation
+        function showTab(tab) {
+            document.getElementById("historySection").style.display = tab === "history" ? "block" : "none";
+            document.getElementById("domainSection").style.display = tab === "domains" ? "block" : "none";
+            document.getElementById("bookmarksSection").style.display = tab === "bookmarks" ? "block" : "none";
+        }
+
+        // Settings Modal
+        document.getElementById("settingsBtn").onclick = async () => {
+            populateHistoryDropdown();
+            await loadDomains();
+            document.getElementById("settingsModal").style.display = "block";
+            showTab("history");
+        };
+
+        document.getElementById("tabHistory").onclick = () => showTab("history");
+        document.getElementById("tabDomains").onclick = () => showTab("domains");
+        document.getElementById("tabBookmarks").onclick = () => {
+            showTab("bookmarks");
+            updateBookmarksList();
+        };
+
+        document.getElementById("historyDropdown").addEventListener("change", (e) => {
+            const selected = e.target.value;
+            if (selected) {
+                document.getElementById("keyInput").value = selected;
+                document.getElementById("settingsModal").style.display = "none";
+            }
+        });
+
+        document.getElementById("saveDomains").onclick = saveDomains;
+        document.getElementById("resetDomains").onclick = resetDomains;
+
+        // Search Button
+        document.getElementById("submitBtn").addEventListener("click", async () => {
+            const rawInput = document.getElementById("keyInput").value.trim();
+            if (!rawInput) return alert("Please enter at least one keyword");
+
+            const keywords = rawInput.split(",").map(k => k.trim()).filter(Boolean);
+            if (keywords.length === 0) return alert("No valid keywords found");
+
+            setCookie("keyword", rawInput);
+            updateHistory(rawInput);
+
+            const chipsContainer = document.getElementById("keywordChips");
+            chipsContainer.innerHTML = '';
+            keywords.forEach(k => {
+                const chip = document.createElement("span");
+                chip.className = "keyword-chip";
+                chip.textContent = k;
+                chipsContainer.appendChild(chip);
+            });
+
+            const list = document.getElementById("results");
+            list.innerHTML = '<li>Loading news...</li>';
+
+            // --- NEW: Check if the box is checked ---
+            const noDomainFilter = document.getElementById("noDomainFilter").checked;
+            const domainsToSend = noDomainFilter ? [] : allowedDomains;
+
+            try {
+                const response = await fetch("/search", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ keywords, allowed_domains: domainsToSend})
+                });
+
+                if (!response.ok) throw new Error("Network response was not ok");
+
+                const data = await response.json();
+                list.innerHTML = '';
+
+                if (data.length === 0) {
+                    list.innerHTML = "<li>No news found! Maybe change the keywords.</li>";
+                    return;
+                }
+
+                data.forEach(item => {
+                    const li = document.createElement("li");
+                    if (item.title === "" || item.url === "#" || item.domain === "") {
+                        li.textContent = "No valid news found. Try different keywords or edit allowed domains.";
+                        list.appendChild(li);
+                        return;
+                    }
+                    li.innerHTML = `<a href="${item.url}" target="_blank">${item.title}<br>Source: ${item.domain}</a>
+                    <button onclick='save(this, ${JSON.stringify(JSON.stringify(item))})' style="background: none; border: none; cursor: pointer;">
+                        <div class="notstored">&#9734;</div>
+                    </button>`;
+                    list.appendChild(li);
+                });
+            } catch (err) {
+                list.innerHTML = '';
+                alert("Failed to load news. Please try again later.");
+                console.error("Fetch error:", err);
+            }
+        });
+
+        // On Page Load
+        document.addEventListener("DOMContentLoaded", async () => {
+            const resultsCountDiv = document.getElementById("resultsCount");
+            resultsCountDiv.textContent = `Total results: ${data.length}`;
+            const savedKeyword = getCookie("keyword");
+            if (savedKeyword) {
+                document.getElementById("keyInput").placeholder = "e.g. " + savedKeyword;
+            }
+            await loadDomains(); // preload domains
+        });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                closeSettingsModal();
+            }
+        });
+        document.addEventListener("keydown", (e) => {
+            if (
+                (e.key === "Enter" || e.keyCode === 13) &&
+                document.activeElement === document.getElementById("keyInput")
+            ) {
+                document.getElementById("submitBtn").click();
+            }
+        });
+        function closeSettingsModal() {
+            document.getElementById("settingsModal").style.display = "none";
+        }
+    </script>
+</body>
